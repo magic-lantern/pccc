@@ -28,3 +28,15 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// ccc_rcpp_par
+Rcpp::DataFrame ccc_rcpp_par(Rcpp::CharacterMatrix& MAT, int version);
+RcppExport SEXP pccc_ccc_rcpp_par(SEXP MATSEXP, SEXP versionSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::CharacterMatrix& >::type MAT(MATSEXP);
+    Rcpp::traits::input_parameter< int >::type version(versionSEXP);
+    rcpp_result_gen = Rcpp::wrap(ccc_rcpp_par(MAT, version));
+    return rcpp_result_gen;
+END_RCPP
+}

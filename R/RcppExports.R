@@ -53,3 +53,7 @@ ccc_rcpp <- function(MAT, version) {
     .Call('pccc_ccc_rcpp', PACKAGE = 'pccc', MAT, version)
 }
 
+ccc_rcpp_par <- function(MAT, version) {
+    .Call('pccc_ccc_rcpp_par', PACKAGE = 'pccc', MAT, version)
+}
+
