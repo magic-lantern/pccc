@@ -5,6 +5,15 @@
 
 using namespace Rcpp;
 
+// test_ccc
+void test_ccc();
+RcppExport SEXP _pccc_test_ccc() {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    test_ccc();
+    return R_NilValue;
+END_RCPP
+}
 // ccc_mat_rcpp
 Rcpp::DataFrame ccc_mat_rcpp(Rcpp::CharacterMatrix& dx, Rcpp::CharacterMatrix& pc, int version);
 RcppExport SEXP _pccc_ccc_mat_rcpp(SEXP dxSEXP, SEXP pcSEXP, SEXP versionSEXP) {
@@ -31,6 +40,7 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
+    {"_pccc_test_ccc", (DL_FUNC) &_pccc_test_ccc, 0},
     {"_pccc_ccc_mat_rcpp", (DL_FUNC) &_pccc_ccc_mat_rcpp, 3},
     {"_pccc_get_codes", (DL_FUNC) &_pccc_get_codes, 1},
     {NULL, NULL, 0}

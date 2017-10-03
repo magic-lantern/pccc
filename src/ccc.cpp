@@ -4,6 +4,101 @@
 #include <string>
 #include <Rcpp.h>
 #include "pccc.h"
+#include <sstream>
+#include <fstream>
+#include <vector>
+#include <array>
+#include <chrono>
+
+std::string trim(std::string const& str)
+{
+  // from https://codereview.stackexchange.com/questions/40124/trim-white-space-from-string
+  
+  if(str.empty())
+    return str;
+  
+  std::size_t firstScan = str.find_first_not_of(' ');
+  std::size_t first     = firstScan == std::string::npos ? str.length() : firstScan;
+  std::size_t last      = str.find_last_not_of(' ');
+  return str.substr(first, last-first+1);
+}
+
+// [[Rcpp::export]]
+void test_ccc() {
+  // Run this function with this line:
+  // .Call('_pccc_test_ccc', PACKAGE = 'pccc')
+  std::cout << " calling test_ccc\n";
+  
+  const int MAX_ROWS = 10;
+  std::string line;
+  
+  auto start = std::chrono::system_clock::now();
+
+  std::ifstream infile("C:/HCUPData/KID/KID_2009_Core.ASC");
+
+  std::array<std::string, 121> row;
+  std::vector<std::array<std::string, 121> > matrix;
+  size_t mitr, ritr;
+  
+  Rcpp::CharacterMatrix dx(MAX_ROWS, 44);
+  Rcpp::CharacterMatrix pc(MAX_ROWS, 44);
+  Rcpp::CharacterVector dx_row(29);
+  Rcpp::CharacterVector pc_row(15);
+  
+  int widths [2][121] = {
+    {0,5,13,87,92,97,102,107,112,117,122,127,132,137,142,147,152,157,162,167,172,177,182,187,192,197,202,207,212,287,292,297,302,307,405,409,413,417,421,425,429,433,437,441,445,449,453,457,461,465},
+    {4,12,86,91,96,101,106,111,116,121,126,131,136,141,146,151,156,161,166,171,176,181,186,191,196,201,206,211,286,291,296,301,306,404,408,412,416,420,424,428,432,436,440,444,448,452,456,460,464,600}
+  };
+  
+  int row_count = 0;
+  while (std::getline(infile, line) && row_count <= MAX_ROWS)
+  {
+    std::cout << row_count << "-----------------------\n" << line << "------------------------\n";
+    for (ritr = 0; ritr < row.size(); ritr++) {
+      row[ritr] = trim(line.substr(widths[0][ritr], widths[1][ritr] - widths[0][ritr] + 1));
+    }
+    
+    //build the diagnostic code vector
+    for (ritr = 3; ritr < 28; ritr++){
+      dx[row_count, 0].push_back
+      dx_row.push_back(row[ritr]);
+    }
+    for (ritr = 29; ritr < 33; ritr++){
+      dx_row.push_back(row[ritr]);
+    }
+    
+    // build the procedure code vector
+    for (ritr = 34; ritr < 49; ritr++){
+      pc_row.push_back(row[ritr]);
+    }
+
+    matrix.push_back(row);
+    dx.
+    dx[row_count] = dx_row;
+    //pc.push_back(pc_row);
+    
+    row_count++;
+  }
+  
+  std::cout << "matrix.size(): " << matrix.size() << "\n";
+  
+  auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - start);
+  std::cout << "time to load file: " << duration.count() << "ms\n";
+  
+  std::array<std::string, 121> r;
+  for (mitr = 0; mitr < matrix.size(); ++mitr) {
+    r = matrix[mitr];
+    std::cout << "r[0]: ]" << r[0] << "[ ";
+    std::cout << "r[1]: ]" << r[1] << "[ ";
+    std::cout << "r[2]: ]" << r[2] << "[\n";
+    for (ritr = 0; ritr < row.size(); ritr++) {
+      //std::cout << r[ritr];
+    }
+  } 
+  
+
+  std::cout << " finsihed test_ccc\n";
+}
 
 // [[Rcpp::export]]
 Rcpp::DataFrame ccc_mat_rcpp(Rcpp::CharacterMatrix& dx, Rcpp::CharacterMatrix& pc, int version = 9)
@@ -17,7 +112,8 @@ Rcpp::DataFrame ccc_mat_rcpp(Rcpp::CharacterMatrix& dx, Rcpp::CharacterMatrix& p
   std::vector<std::string> dx_str;
   std::vector<std::string> pc_str;
 
-  for (size_t i=0; i < dx.nrow(); ++i) { 
+  for (int i=0; i < dx.nrow(); ++i) { 
+
     dx_row = dx.row(i);
     pc_row = pc.row(i);
     dx_str = Rcpp::as<std::vector<std::string>>(dx_row);
