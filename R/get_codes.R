@@ -3,7 +3,7 @@
 as.data.frame.pccc_codes <- function(x, ...) {
   v <- attr(x, "version")
 
-  out <- 
+  out <-
     Map(function(category, type)
         {
           cd <- unlist(x[category, type])
@@ -11,7 +11,7 @@ as.data.frame.pccc_codes <- function(x, ...) {
           if (length(cd))
             dplyr::data_frame(category = category, type = type, icd = cd)
 
-        }, 
+        },
         category = rep(rownames(x), each = ncol(x)),
         type = rep(colnames(x), times = nrow(x))
         )
@@ -21,3 +21,13 @@ as.data.frame.pccc_codes <- function(x, ...) {
 #' @method as.tbl pccc_codes
 #' @export
 as.tbl.pccc_codes <- as.data.frame.pccc_codes
+
+
+install.packages(c("rmarkdown", "pryr", "nycflights13", "png",
+                   "stringi", "lubridate", "testthat"))
+install.packages(c("devtools", "roxygen2", "testthat", "knitr"))
+rstudioapi::isAvailable("0.99.149")
+library(devtools)
+has_devel()
+.libPaths()
+lapply(.libPaths(), dir)
