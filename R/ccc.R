@@ -69,5 +69,77 @@ ccc.data.frame <- function(data, id, dx_cols, pc_cols, icdv) {
 
   ids <- dplyr::select(data, !!dplyr::enquo(id))
 
-  dplyr::bind_cols(ids, ccc_mat_rcpp(dxmat, pcmat, icdv))
+  dplyr::bind_cols(ids, ccc_mat_r(dxmat, pcmat, icdv))
+  #dplyr::bind_cols(ids, ccc_mat_rcpp(dxmat, pcmat, icdv))
 }
+
+ccc_mat_r <- function(dx, pc, version = 9L) {
+  codes <- get_code_set(version)
+
+  df <- data.frame(neuromusc = integer(),
+             cvd = integer(),
+             respiratory = integer(),
+             renal = integer(),
+             gi = integer(),
+             hemato_immu = integer(),
+             metabolic = integer(),
+             congeni_genetic = integer(),
+             malignancy = integer(),
+             neonatal = integer(),
+             tech_dep = integer(),
+             transplant = integer(),
+             ccc_flag = integer())
+  df[1:nrow(dx),] <- c(0L)
+
+  for(i in 1:nrow(dx)) {
+    dx_row <- dx[i,]
+    pc_row <- pc[i,]
+
+    if(find_match(dx_row, pc_row, codes$dx_neuromusc, codes$pc_neuromusc))
+      df$neuromusc[i] <- 1L
+    else if(find_match(dx_row, pc_row, codes$dx_cvd, codes$pc_cvd))
+      df$cvd[i] <-  1L
+    else if(find_match(dx_row, pc_row, codes$dx_respiratory, codes$pc_respiratory))
+      df$respiratory[i] <- 1L
+    else if(find_match(dx_row, pc_row, codes$dx_renal, codes$pc_renal))
+      df$renal[i] <- 1L
+    else if(find_match(dx_row, pc_row, codes$dx_gi, codes$pc_gi))
+      df$gi[i] <- 1L
+    else if (find_match(dx_row, pc_row, codes$dx_hemato_immu, codes$pc_hemato_immu))
+      df$hemato_immu[i] <- 1L
+    else if (find_match(dx_row, pc_row, codes$dx_metabolic, codes$pc_metabolic))
+      df$metabolic[i] <- 1L
+    else if (find_match(dx_row, NA, codes$dx_congeni_genetic))
+      df$congeni_genetic[i] <- 1L
+    else if (find_match(dx_row, pc_row, codes$dx_malignancy, codes$pc_malignancy))
+      df$malignancy[i] <- 1L
+    else if (find_match(dx_row, NA, codes$dx_neonatal))
+      df$neonatal[i] <- 1L
+
+    df$tech_dep[i] <- find_match(dx_row, pc_row, codes$dx_tech_dep, codes$pc_tech_dep)
+    df$transplant[i] <- find_match(dx_row, pc_row, codes$dx_transplant, codes$pc_transplant)
+
+    if (sum(df[i,]))
+      df$ccc_flag[i] <- 1L
+  }
+  df
+}
+
+find_match <- function(dx,
+                       pc,
+                       dx_codes,
+                       pc_codes = NULL){
+
+  for (c in dx_codes) {
+    if(any(stringi::stri_startswith_fixed(dx, c),na.rm = TRUE))
+      return(1L)
+  }
+
+  for (c in pc_codes) {
+    if(any(stringi::stri_startswith_fixed(pc, c),na.rm = TRUE))
+      return(1L)
+  }
+  # return 0 if no match
+  0L
+}
+
