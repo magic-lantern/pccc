@@ -69,15 +69,12 @@ ccc.data.frame <- function(data, id, dx_cols, pc_cols, icdv) {
 
   ids <- dplyr::select(data, !!dplyr::enquo(id))
 
-  library(tictoc)
-
-  tic("timing: r version")
+  # library(tictoc)
+  # tic("timing: r version")
   dplyr::bind_cols(ids, ccc_mat_r(dxmat, pcmat, icdv))
-  toc()
+  # toc()
 
-  tic("timing: cpp version")
-  dplyr::bind_cols(ids, ccc_mat_rcpp(dxmat, pcmat, icdv))
-  toc()
+  #dplyr::bind_cols(ids, ccc_mat_rcpp(dxmat, pcmat, icdv))
 }
 
 ccc_mat_r <- function(dx, pc, version = 9L) {
@@ -181,21 +178,24 @@ ccc_mat_r <- function(dx, pc, version = 9L) {
                              "5283","5284","5285","5286","4100","4101","4102","4103","4104","4105","4106","4107","4108",
                              "4109","4194","0091","0092","0093")
 
-  df <- data.frame(
-             neuromusc = integer(),
-             cvd = integer(),
-             respiratory = integer(),
-             renal = integer(),
-             gi = integer(),
-             hemato_immu = integer(),
-             metabolic = integer(),
-             congeni_genetic = integer(),
-             malignancy = integer(),
-             neonatal = integer(),
-             tech_dep = integer(),
-             transplant = integer(),
-             ccc_flag = integer())
-  df[1:nrow(dx),] <- c(0L)
+  # using a matrix here instead of a data frame results in significant performance improvements
+  out <- matrix(0L,
+               nrow = nrow(dx),
+               ncol = 13,
+               dimnames = list(c(),                 # row names
+                               c('neuromusc',       # column names - 1
+                                 'cvd',             # 2
+                                 'respiratory',     # 3
+                                 'renal',           # 4
+                                 'gi',              # 5
+                                 'hemato_immu',     # 6
+                                 'metabolic',       # 7
+                                 'congeni_genetic', # 8
+                                 'malignancy',      # 9
+                                 'neonatal',        # 10
+                                 'tech_dep',        # 11
+                                 'transplant',      # 12
+                                 'ccc_flag')))      # 13
 
   for(i in 1:nrow(dx)) {
     dx_row <- dx[i,]
@@ -203,78 +203,68 @@ ccc_mat_r <- function(dx, pc, version = 9L) {
     ccc_flag <- 0L
 
     if(find_match(dx_row, pc_row, dx_neuromusc, pc_neuromusc)) {
-      df$neuromusc[i] <- 1L
+      out[i, 1] <- 1L
       ccc_flag <- 1L
     }
     else if(find_match(dx_row, pc_row, dx_cvd, pc_cvd)) {
-      df$cvd[i] <-  1L
+      out[i,2] <- 1L
       ccc_flag <- 1L
     }
     else if(find_match(dx_row, pc_row, dx_respiratory, pc_respiratory)) {
-      df$respiratory[i] <- 1L
+      out[i, 3] <- 1L
       ccc_flag <- 1L
     }
     else if(find_match(dx_row, pc_row, dx_renal, pc_renal)) {
-      df$renal[i] <- 1L
+      out[i, 4] <- 1L
       ccc_flag <- 1L
     }
     else if(find_match(dx_row, pc_row, dx_gi, pc_gi)) {
-      df$gi[i] <- 1L
+      out[i, 5] <- 1L
       ccc_flag <- 1L
     }
     else if (find_match(dx_row, pc_row, dx_hemato_immu, pc_hemato_immu)) {
-      df$hemato_immu[i] <- 1L
+      out[i, 6] <- 1L
       ccc_flag <- 1L
     }
     else if (find_match(dx_row, pc_row, dx_metabolic, pc_metabolic)) {
-      df$metabolic[i] <- 1L
+      out[i, 7] <- 1L
       ccc_flag <- 1L
     }
     else if (find_match(dx_row, NA, dx_congeni_genetic)) {
-      df$congeni_genetic[i] <- 1L
+      out[i, 8] <- 1L
       ccc_flag <- 1L
     }
     else if (find_match(dx_row, pc_row, dx_malignancy, pc_malignancy)) {
-      df$malignancy[i] <- 1L
+      out[i, 9] <- 1L
       ccc_flag <- 1L
     }
     else if (find_match(dx_row, NA, dx_neonatal)) {
-      df$neonatal[i] <- 1L
+      out[i, 10] <- 1L
       ccc_flag <- 1L
     }
 
     if (find_match(dx_row, pc_row, dx_tech_dep, pc_tech_dep)) {
-      df$tech_dep[i] <- 1L
+      out[i, 11] <- 1L
       ccc_flag <- 1L
     }
 
     if (find_match(dx_row, pc_row, dx_transplant, pc_transplant)) {
-      df$transplant[i] <- 1L
+      out[i, 12] <- 1L
       ccc_flag <- 1L
     }
 
-    # base time 26 seconds with 60k rows
-
-    # this block takes 27 seconds with 100k rows
-    # if (sum(df[i,]))
-    #   df$ccc_flag[i] <- 1L
-
-    # this one line takes abotut 10 seconds with 60k rows
-    # df$ccc_flag[i] <- ccc_flag
-
-    # this block takes 10 seconds with 60k rows
+    # Through various tests - recorded at https://gist.github.com/magic-lantern/648afc6963b1bc89dd1a6efc74eac2c0
+    # this method was found to be fastest in general address cells in a matrix by number/integer
+    # rather than name; also logic based on a flag is quicker than doing a row sum
     if(ccc_flag)
-      df$ccc_flag[i] <- 1L
-
-    # 20 seconds with 60k rows
-    # df[i, 13] <- ccc_flag
-
-    # 20 seconds with 60k rows
-    # df[i, 13L] <- ccc_flag
+      out[i, 13] <- 1L
   }
-  df
+
+  as.data.frame(out)
 }
 
+# other than this string comparison function, the pure R version is identical in performance
+# to the C++ version. Just need to fix this portion...
 find_match <- function(dx,
                        pc,
                        dx_codes,
@@ -290,5 +280,5 @@ find_match <- function(dx,
   #     return(1L)
   # }
   #return 0 if no match
-  1L
+  0L
 }
