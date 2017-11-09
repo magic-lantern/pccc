@@ -1,15 +1,18 @@
-eg_data <-
-  dplyr::data_frame(id = letters,
-                    dx1 = c(NA, NA, sample(get_codes(10)[["hemato_immu", "dx"]], 24)),
-                    dx2 = c("A", sample(get_codes(10)[["gi", "dx"]], 25)),
-                    dx3 = LETTERS,
-                    pc1 = c("B", sample(get_codes(10)[["cvd", "pc"]], 25)),
-                    pc2 = LETTERS,
-                    other_col = LETTERS)
+rm(list=ls())
+gc()
 
-ccc(eg_data, 
+icd_ver <- 10
+
+eg_data <-
+  dplyr::data_frame(id = c('A', 'B', 'C'),
+                    dx1 = c(NA, NA, sample(get_codes(icd_ver)[["hemato_immu", "dx"]], 1)),
+                    dx2 = c("acode", sample(get_codes(icd_ver)[["gi", "dx"]], 2)),
+                    pc1 = c("bcode", sample(get_codes(icd_ver)[["cvd", "pc"]], 1), 'ccode')
+                    )
+
+ccc(eg_data,
     id,
     dx_cols = dplyr::starts_with("dx"),
     pc_cols = dplyr::starts_with("pc"),
-    icdv = 10)
+    icdv = icd_ver)
 

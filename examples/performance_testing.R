@@ -272,11 +272,67 @@ find_match_lapply <- function(dx,
 
 ########################################################################################
 ########################################################################################
-
+library(tic)
 tic("R version")
-r_ver <- ml_ccc(icd9_dataset[c(1:50000), c(1:45)], # get id, dx, and pc columns
+r_ver <- ml_ccc(icd9_dataset[c(1:1), c(1:45)], # get id, dx, and pc columns
                 id      = id,
                 dx_cols = dplyr::starts_with("dx"),
                 pc_cols = dplyr::starts_with("pc"),
                 icdv    = 09)
 toc()
+
+
+library(tic)
+tic("R version")
+r_ver <- pccc::ccc(pccc::pccc_icd9_dataset, # get id, dx, and pc columns
+                id      = id,
+                dx_cols = dplyr::starts_with("dx"),
+                pc_cols = dplyr::starts_with("pc"),
+                icdv    = 09)
+toc()
+
+
+
+
+###############################################################################
+# list of ENVs
+# this is subject to subscript out of bounds errors
+# this method (list of envs) is about 3x faster to build than env of envs
+###############################################################################
+rm(list=ls())
+gc()
+codes <- pccc::get_codes(icdv = 9L)
+
+# loop through all codes once to find max length
+max_length <- 1
+for(r in 1:nrow(codes)) {
+  ccc <- rownames(codes)[r]
+  for (c in 1:ncol(codes)) {
+    for (n in seq_along(codes[[r, c]])) {
+      if (stri_length(codes[[r, c]][n]) > max_length)
+        max_length <- stri_length(codes[[r, c]][n])
+    }
+  }
+}
+
+# now build the data structure for searching
+code_list <- sapply(c(1:max_length), function(x) new.env(parent = emptyenv()))
+
+for(r in 1:nrow(codes)) {
+  ccc <- rownames(codes)[r]
+  for (c in 1:ncol(codes)) {
+    for (n in seq_along(codes[[r, c]])) {
+      if (! ccc %in% c('tech_dep', 'transplant'))
+        code_list[[stri_length(codes[[r, c]][n])]][[codes[[r, c]][n]]] <- ccc
+    }
+  }
+}
+
+# test finding elements
+find_in_list <- function() {
+  lapply(checklist, function(c){
+    if (stri_length(c) < max_length)
+      code_list[[stri_length(c)]][[c]]
+    })
+}
+

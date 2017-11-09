@@ -6,6 +6,58 @@
   assign("pkg.env", new.env(parent = emptyenv()), envir = parent.env(environment()))
 }
 
+#' @export
+get_primary_codes <- function(icdv = 9L) {
+  codes <- get_codes(icdv)
+
+  # loop through all codes once to find max length
+  max_length <- 1
+  min_length <- 5
+  for(r in 1:nrow(codes)) {
+    ccc <- rownames(codes)[r]
+    for (c in 1:ncol(codes)) {
+      for (n in seq_along(codes[[r, c]])) {
+        if (stringi::stri_length(codes[[r, c]][n]) > max_length)
+          max_length <- stringi::stri_length(codes[[r, c]][n])
+        if (stringi::stri_length(codes[[r, c]][n]) < min_length)
+          min_length <- stringi::stri_length(codes[[r, c]][n])
+      }
+    }
+  }
+  pkg.env[["max_length"]] <- max_length
+  pkg.env[["min_length"]] <- min_length
+
+  # now build the data structure for searching
+  code_list <- sapply(c(1:max_length), function(x) new.env(parent = emptyenv()))
+
+  for(r in 1:nrow(codes)) {
+    ccc <- rownames(codes)[r]
+    for (c in 1:ncol(codes)) {
+      for (n in seq_along(codes[[r, c]])) {
+        if (! ccc %in% c('tech_dep', 'transplant'))
+          code_list[[stringi::stri_length(codes[[r, c]][n])]][[codes[[r, c]][n]]] <- ccc
+      }
+    }
+  }
+  code_list
+}
+
+#' @export
+get_codes_subset <- function(icdv = 9L, ccc_subset_name) {
+  codes <- get_codes(icdv)[ccc_subset_name, ]
+
+  # now build the data structure for searching
+  code_list <- sapply(c(1:pkg.env[["max_length"]]), function(x) new.env(parent = emptyenv()))
+
+  for (c in seq_along(codes)) {
+    for (n in seq_along(codes[[c]])) {
+      code_list[[stringi::stri_length(codes[[c]][n])]][[codes[[c]][n]]] <- ccc_subset_name
+    }
+  }
+
+  code_list
+}
+
 set_code_set <- function(icd_ver = 9L) {
   if (icd_ver == 9) {
     pkg.env$dx_neuromusc <- c("3180","3181","3182","330","33111","33119","3314","33189","3319","3320","3321",

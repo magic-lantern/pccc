@@ -50,38 +50,41 @@ ccc.data.frame <- function(data, id, dx_cols, pc_cols, icdv) {
   }
 
   if (!missing(dx_cols)) {
-    dxmat <- sapply(dplyr::select(data, !!dplyr::enquo(dx_cols)), as.character)
-    if(! is.matrix(dxmat)) {
-      dxmat <- as.matrix(dxmat)
-    }
+    dxmat <- as.matrix(dplyr::mutate_all(dplyr::select(data, !!dplyr::enquo(dx_cols)), as.character))
   } else {
     dxmat <- matrix("", nrow = nrow(data))
   }
 
   if (!missing(pc_cols)) {
-    pcmat <- sapply(dplyr::select(data, !!dplyr::enquo(pc_cols)), as.character)
-    if(! is.matrix(pcmat)) {
-      pcmat <- as.matrix(pcmat)
-    }
+    pcmat <- as.matrix(dplyr::mutate_all(dplyr::select(data, !!dplyr::enquo(pc_cols)), as.character))
   } else {
     pcmat <- matrix("", nrow = nrow(data))
   }
 
   ids <- dplyr::select(data, !!dplyr::enquo(id))
 
-  # library(tictoc)
-  # tic("timing: r version")
-  dplyr::bind_cols(ids, ccc_mat_r(dxmat, pcmat, icdv))
-  # toc()
 
-  #dplyr::bind_cols(ids, ccc_mat_rcpp(dxmat, pcmat, icdv))
+  # # test with 100k rows of data
+  # timing: r version: 346.827 sec elapsed
+  # timing: r hash version: 75.437 sec elapsed
+  # timing: c++ version: 6.457 sec elapsed
+  # #
+  library(tictoc)
+  tic("timing: r version")
+  #dplyr::bind_cols(ids, ccc_mat_r(dxmat, pcmat, icdv))
+  toc()
+
+  tic("timing: r hash version")
+  dplyr::bind_cols(ids, ccc_hash_r(dxmat, pcmat, icdv))
+  toc()
+
+  tic("timing: c++ version")
+  dplyr::bind_cols(ids, ccc_mat_rcpp(dxmat, pcmat, icdv))
+  toc()
 }
 
 ccc_mat_r <- function(dx, pc, version = 9L) {
-
-  tic("timing: get code set")
   set_code_set(version)
-  toc()
 
   dx_neuromusc <- c("3180","3181","3182","330","33111","33119","3314","33189","3319","3320","3321",
                     "3330","3332","3334","3335","3337","3339","334","335","343","34501","34581","3590","3591",
@@ -270,15 +273,82 @@ find_match <- function(dx,
                        dx_codes,
                        pc_codes = NULL){
 
-  # for (c in dx_codes) {
-  #   if(any(stringi::stri_startswith_fixed(dx, c),na.rm = TRUE))
-  #     return(1L)
-  # }
-  #
-  # for (c in pc_codes) {
-  #   if(any(stringi::stri_startswith_fixed(pc, c),na.rm = TRUE))
-  #     return(1L)
-  # }
+  for (c in dx_codes) {
+    if(any(stringi::stri_startswith_fixed(dx, c),na.rm = TRUE))
+      return(1L)
+  }
+
+  for (c in pc_codes) {
+    if(any(stringi::stri_startswith_fixed(pc, c),na.rm = TRUE))
+      return(1L)
+  }
   #return 0 if no match
   0L
+}
+
+# using new list of envs
+ccc_hash_r <- function(dx, pc, version = 9L) {
+  out <- matrix(0L,
+                nrow = nrow(dx),
+                ncol = 13,
+                dimnames = list(c(),                 # row names
+                                c('neuromusc',       # column names - 1
+                                  'cvd',             # 2
+                                  'respiratory',     # 3
+                                  'renal',           # 4
+                                  'gi',              # 5
+                                  'hemato_immu',     # 6
+                                  'metabolic',       # 7
+                                  'congeni_genetic', # 8
+                                  'malignancy',      # 9
+                                  'neonatal',        # 10
+                                  'tech_dep',        # 11
+                                  'transplant',      # 12
+                                  'ccc_flag')))      # 13
+
+  codes <- get_primary_codes(version)
+
+  # look at the 'mutually exclusive' cccs
+  for(i in 1:nrow(dx)) {
+    pt_codes <- c(dx[i, ], pc[i, ])
+    for (l in pkg.env[["min_length"]]:pkg.env[["max_length"]]) {
+      trimmed <- substr(pt_codes, 1, l)
+      for (c in trimmed) {
+        if (exists(c, envir = codes[[l]])) {
+          out[i, codes[[l]][[c]]] <- 1L
+          out[i, 13] <- 1L
+        }
+      }
+    }
+  }
+
+  codes <- get_codes_subset(icdv = version,  ccc_subset_name = 'tech_dep')
+  for(i in 1:nrow(dx)) {
+    pt_codes <- c(dx[i, ], pc[i, ])
+    for (l in pkg.env[["min_length"]]:pkg.env[["max_length"]]) {
+      trimmed <- substr(pt_codes, 1, l)
+      for (c in trimmed) {
+        if (exists(c, envir = codes[[l]])) {
+          out[i, codes[[l]][[c]]] <- 1L
+          out[i, 13] <- 1L
+        }
+      }
+    }
+  }
+
+  codes <- get_codes_subset(icdv = version, ccc_subset_name = 'transplant')
+  for(i in 1:nrow(dx)) {
+    pt_codes <- c(dx[i, ], pc[i, ])
+    for (l in pkg.env[["min_length"]]:pkg.env[["max_length"]]) {
+      trimmed <- substr(pt_codes, 1, l)
+      for (c in trimmed) {
+        if (exists(c, envir = codes[[l]])) {
+          out[i, codes[[l]][[c]]] <- 1L
+          out[i, 13] <- 1L
+        }
+      }
+    }
+  }
+
+  as.data.frame(out)
 }
