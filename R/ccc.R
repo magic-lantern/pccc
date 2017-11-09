@@ -306,44 +306,42 @@ ccc_hash_r <- function(dx, pc, version = 9L) {
                                   'transplant',      # 12
                                   'ccc_flag')))      # 13
 
-  codes <- get_primary_codes(version)
+  primary_codes <- get_primary_codes(version)
+  tech_codes <- get_codes_subset(icdv = version,  ccc_subset_name = 'tech_dep')
+  transplant_codes <- get_codes_subset(icdv = version, ccc_subset_name = 'transplant')
 
-  # look at the 'mutually exclusive' cccs
+
   for(i in 1:nrow(dx)) {
     pt_codes <- c(dx[i, ], pc[i, ])
+
+    # look at the 'mutually exclusive' cccs
     for (l in pkg.env[["min_length"]]:pkg.env[["max_length"]]) {
       trimmed <- substr(pt_codes, 1, l)
       for (c in trimmed) {
-        if (exists(c, envir = codes[[l]])) {
-          out[i, codes[[l]][[c]]] <- 1L
+        if (!is.null(primary_codes[[l]][[c]])) {
+          out[i, primary_codes[[l]][[c]]] <- 1L
           out[i, 13] <- 1L
         }
       }
     }
-  }
 
-  codes <- get_codes_subset(icdv = version,  ccc_subset_name = 'tech_dep')
-  for(i in 1:nrow(dx)) {
-    pt_codes <- c(dx[i, ], pc[i, ])
+    # look at tech_dependency codes
     for (l in pkg.env[["min_length"]]:pkg.env[["max_length"]]) {
       trimmed <- substr(pt_codes, 1, l)
       for (c in trimmed) {
-        if (exists(c, envir = codes[[l]])) {
-          out[i, codes[[l]][[c]]] <- 1L
+        if (!is.null(tech_codes[[l]][[c]])) {
+          out[i, tech_codes[[l]][[c]]] <- 1L
           out[i, 13] <- 1L
         }
       }
     }
-  }
 
-  codes <- get_codes_subset(icdv = version, ccc_subset_name = 'transplant')
-  for(i in 1:nrow(dx)) {
-    pt_codes <- c(dx[i, ], pc[i, ])
+    # look at transplant related codes
     for (l in pkg.env[["min_length"]]:pkg.env[["max_length"]]) {
       trimmed <- substr(pt_codes, 1, l)
       for (c in trimmed) {
-        if (exists(c, envir = codes[[l]])) {
-          out[i, codes[[l]][[c]]] <- 1L
+        if (!is.null(transplant_codes[[l]][[c]])) {
+          out[i, transplant_codes[[l]][[c]]] <- 1L
           out[i, 13] <- 1L
         }
       }
