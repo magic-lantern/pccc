@@ -70,12 +70,13 @@ ccc.data.frame <- function(data, id, dx_cols, pc_cols, icdv) {
   # timing: c++ version: 6.457 sec elapsed
   # #
   library(tictoc)
-  tic("timing: r version")
-  #dplyr::bind_cols(ids, ccc_mat_r(dxmat, pcmat, icdv))
-  toc()
+  # tic("timing: r version")
+  # #dplyr::bind_cols(ids, ccc_mat_r(dxmat, pcmat, icdv))
+  # toc()
 
   tic("timing: r hash version")
-  dplyr::bind_cols(ids, ccc_hash_r(dxmat, pcmat, icdv))
+  result <- ccc_hash_r(dxmat, pcmat, icdv)
+  dplyr::bind_cols(ids, result)
   toc()
 
   tic("timing: c++ version")
@@ -310,38 +311,35 @@ ccc_hash_r <- function(dx, pc, version = 9L) {
   tech_codes <- get_codes_subset(icdv = version,  ccc_subset_name = 'tech_dep')
   transplant_codes <- get_codes_subset(icdv = version, ccc_subset_name = 'transplant')
 
-
   for(i in 1:nrow(dx)) {
     pt_codes <- c(dx[i, ], pc[i, ])
 
     # look at the 'mutually exclusive' cccs
     for (l in pkg.env[["min_length"]]:pkg.env[["max_length"]]) {
       trimmed <- substr(pt_codes, 1, l)
+
+      p <- primary_codes[[l]]
+      tc <- tech_codes[[l]]
+      tp <- transplant_codes[[l]]
+
       for (c in trimmed) {
-        if (!is.null(primary_codes[[l]][[c]])) {
-          out[i, primary_codes[[l]][[c]]] <- 1L
+        match <- p[[c]]
+        if (!is.null(match)) {
+          out[i, match] <- 1L
           out[i, 13] <- 1L
         }
-      }
-    }
 
-    # look at tech_dependency codes
-    for (l in pkg.env[["min_length"]]:pkg.env[["max_length"]]) {
-      trimmed <- substr(pt_codes, 1, l)
-      for (c in trimmed) {
-        if (!is.null(tech_codes[[l]][[c]])) {
-          out[i, tech_codes[[l]][[c]]] <- 1L
+        # look at tech_dependency codes
+        match <- tc[[c]]
+        if (!is.null(match)) {
+          out[i, match] <- 1L
           out[i, 13] <- 1L
         }
-      }
-    }
 
-    # look at transplant related codes
-    for (l in pkg.env[["min_length"]]:pkg.env[["max_length"]]) {
-      trimmed <- substr(pt_codes, 1, l)
-      for (c in trimmed) {
-        if (!is.null(transplant_codes[[l]][[c]])) {
-          out[i, transplant_codes[[l]][[c]]] <- 1L
+        # look at transplant related codes
+        match <- tp[[c]]
+        if (!is.null(match)) {
+          out[i, match] <- 1L
           out[i, 13] <- 1L
         }
       }
@@ -350,3 +348,4 @@ ccc_hash_r <- function(dx, pc, version = 9L) {
 
   as.data.frame(out)
 }
+
