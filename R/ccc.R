@@ -63,20 +63,23 @@ ccc.data.frame <- function(data, id, dx_cols, pc_cols, icdv) {
 
   ids <- dplyr::select(data, !!dplyr::enquo(id))
 
-
   # # test with 100k rows of data
-  # timing: r version: 346.827 sec elapsed
-  # timing: r hash version: 75.437 sec elapsed
-  # timing: c++ version: 6.457 sec elapsed
+  # timing: r version: 103.123 sec elapsed - uses similar logic to C++ version
+  # timing: r hash version: 17.759 sec elapsed - env to store ICD codes for comparison
+  # timing: r flat hash version: 20.058 sec elapsed - first version of using env to store ICD codes for comparison
+  # timing: c++ version: 6.593 sec elapsed - original
   # #
   library(tictoc)
-  # tic("timing: r version")
-  # #dplyr::bind_cols(ids, ccc_mat_r(dxmat, pcmat, icdv))
-  # toc()
+  tic("timing: r version")
+  dplyr::bind_cols(ids, ccc_mat_r(dxmat, pcmat, icdv))
+  toc()
 
   tic("timing: r hash version")
-  result <- ccc_hash_r(dxmat, pcmat, icdv)
-  dplyr::bind_cols(ids, result)
+  dplyr::bind_cols(ids, ccc_hash_r(dxmat, pcmat, icdv))
+  toc()
+
+  tic("timing: r flat hash version")
+  dplyr::bind_cols(ids, ccc_hash_flat_r(dxmat, pcmat, icdv))
   toc()
 
   tic("timing: c++ version")
@@ -275,12 +278,14 @@ find_match <- function(dx,
                        pc_codes = NULL){
 
   for (c in dx_codes) {
-    if(any(stringi::stri_startswith_fixed(dx, c),na.rm = TRUE))
+    # imported stringi in NAMESPACE - faster than calling stringi:: stri_startswith...
+    if(any(stri_startswith_fixed(dx, c),na.rm = TRUE))
       return(1L)
   }
 
   for (c in pc_codes) {
-    if(any(stringi::stri_startswith_fixed(pc, c),na.rm = TRUE))
+    # imported stringi in NAMESPACE - faster than calling stringi:: stri_startswith...
+    if(any(stri_startswith_fixed(pc, c),na.rm = TRUE))
       return(1L)
   }
   #return 0 if no match
@@ -312,32 +317,63 @@ ccc_hash_r <- function(dx, pc, version = 9L) {
   transplant_codes <- get_codes_subset(icdv = version, ccc_subset_name = 'transplant')
 
   for(i in 1:nrow(dx)) {
-    pt_codes <- c(dx[i, ], pc[i, ])
+    dx_row <- dx[i, ]
+    pc_row <- pc[i, ]
 
-    # look at the 'mutually exclusive' cccs
     for (l in pkg.env[["min_length"]]:pkg.env[["max_length"]]) {
-      trimmed <- substr(pt_codes, 1, l)
+      # tested several methods to trim the string to the correct length, and the base substr()
+      # is fastest
+      dx_trimmed <- substr(dx_row, 1, l)
+      pc_trimmed <- substr(pc_row, 1, l)
 
-      p <- primary_codes[[l]]
-      tc <- tech_codes[[l]]
-      tp <- transplant_codes[[l]]
+      p_dx <- primary_codes[[l]][['dx']]
+      tc_dx <- tech_codes[[l]][['dx']]
+      tp_dx <- transplant_codes[[l]][['dx']]
 
-      for (c in trimmed) {
-        match <- p[[c]]
+      p_pc <- primary_codes[[l]][['pc']]
+      tc_pc <- tech_codes[[l]][['pc']]
+      tp_pc <- transplant_codes[[l]][['pc']]
+
+      # check diagnosis codes for mutually exclusive cccs
+      for (c in dx_trimmed) {
+        match <- p_dx[[c]]
         if (!is.null(match)) {
           out[i, match] <- 1L
           out[i, 13] <- 1L
         }
 
         # look at tech_dependency codes
-        match <- tc[[c]]
+        match <- tc_dx[[c]]
         if (!is.null(match)) {
           out[i, match] <- 1L
           out[i, 13] <- 1L
         }
 
         # look at transplant related codes
-        match <- tp[[c]]
+        match <- tp_dx[[c]]
+        if (!is.null(match)) {
+          out[i, match] <- 1L
+          out[i, 13] <- 1L
+        }
+      }
+
+      # # check procedure codes
+      for (c in pc_trimmed) {
+        match <- p_pc[[c]]
+        if (!is.null(match)) {
+          out[i, match] <- 1L
+          out[i, 13] <- 1L
+        }
+
+        # look at tech_dependency codes
+        match <- tc_pc[[c]]
+        if (!is.null(match)) {
+          out[i, match] <- 1L
+          out[i, 13] <- 1L
+        }
+
+        # look at transplant related codes
+        match <- tp_pc[[c]]
         if (!is.null(match)) {
           out[i, match] <- 1L
           out[i, 13] <- 1L
@@ -348,4 +384,70 @@ ccc_hash_r <- function(dx, pc, version = 9L) {
 
   as.data.frame(out)
 }
+
+# using new list of envs
+ccc_hash_flat_r <- function(dx, pc, version = 9L) {
+  out <- matrix(0L,
+                nrow = nrow(dx),
+                ncol = 13,
+                dimnames = list(c(),                 # row names
+                                c('neuromusc',       # column names - 1
+                                  'cvd',             # 2
+                                  'respiratory',     # 3
+                                  'renal',           # 4
+                                  'gi',              # 5
+                                  'hemato_immu',     # 6
+                                  'metabolic',       # 7
+                                  'congeni_genetic', # 8
+                                  'malignancy',      # 9
+                                  'neonatal',        # 10
+                                  'tech_dep',        # 11
+                                  'transplant',      # 12
+                                  'ccc_flag')))      # 13
+
+  primary_codes <- get_collapsed_codes(version)
+  tech_codes <- get_collapsed_codes_subset(icdv = version,  ccc_subset_name = 'tech_dep')
+  transplant_codes <- get_collapsed_codes_subset(icdv = version, ccc_subset_name = 'transplant')
+
+
+  for(i in 1:nrow(dx)) {
+    pt_codes <- c(dx[i, ], pc[i, ])
+
+    # look at the 'mutually exclusive' cccs
+    for (l in pkg.env[["min_length"]]:pkg.env[["max_length"]]) {
+      trimmed <- substr(pt_codes, 1, l)
+      for (c in trimmed) {
+        if (!is.null(primary_codes[[l]][[c]])) {
+          out[i, primary_codes[[l]][[c]]] <- 1L
+          out[i, 13] <- 1L
+        }
+      }
+    }
+
+    # look at tech_dependency codes
+    for (l in pkg.env[["min_length"]]:pkg.env[["max_length"]]) {
+      trimmed <- substr(pt_codes, 1, l)
+      for (c in trimmed) {
+        if (!is.null(tech_codes[[l]][[c]])) {
+          out[i, tech_codes[[l]][[c]]] <- 1L
+          out[i, 13] <- 1L
+        }
+      }
+    }
+
+    # look at transplant related codes
+    for (l in pkg.env[["min_length"]]:pkg.env[["max_length"]]) {
+      trimmed <- substr(pt_codes, 1, l)
+      for (c in trimmed) {
+        if (!is.null(transplant_codes[[l]][[c]])) {
+          out[i, transplant_codes[[l]][[c]]] <- 1L
+          out[i, 13] <- 1L
+        }
+      }
+    }
+  }
+
+  as.data.frame(out)
+}
+
 

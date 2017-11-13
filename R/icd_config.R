@@ -17,10 +17,10 @@ get_primary_codes <- function(icdv = 9L) {
     ccc <- rownames(codes)[r]
     for (c in 1:ncol(codes)) {
       for (n in seq_along(codes[[r, c]])) {
-        if (stringi::stri_length(codes[[r, c]][n]) > max_length)
-          max_length <- stringi::stri_length(codes[[r, c]][n])
-        if (stringi::stri_length(codes[[r, c]][n]) < min_length)
-          min_length <- stringi::stri_length(codes[[r, c]][n])
+        if (stri_length(codes[[r, c]][n]) > max_length)
+          max_length <- stri_length(codes[[r, c]][n])
+        if (stri_length(codes[[r, c]][n]) < min_length)
+          min_length <- stri_length(codes[[r, c]][n])
       }
     }
   }
@@ -28,14 +28,66 @@ get_primary_codes <- function(icdv = 9L) {
   pkg.env[["min_length"]] <- min_length
 
   # now build the data structure for searching
-  code_list <- sapply(c(1:max_length), function(x) new.env(parent = emptyenv()))
+  code_list <- lapply(c(1:max_length), function(x) new.env(parent = emptyenv()))
+  lapply(code_list, function(x) {
+    x[['dx']] <- new.env(parent = emptyenv())
+    x[['pc']] <- new.env(parent = emptyenv())
+  })
+
 
   for(r in 1:nrow(codes)) {
     ccc <- rownames(codes)[r]
     for (c in 1:ncol(codes)) {
       for (n in seq_along(codes[[r, c]])) {
-        if (! ccc %in% c('tech_dep', 'transplant'))
-          code_list[[stringi::stri_length(codes[[r, c]][n])]][[codes[[r, c]][n]]] <- ccc
+        if (! ccc %in% c('tech_dep', 'transplant')) {
+          code_length <- stri_length(codes[[r, c]][n])
+          code_type <- colnames(codes)[c]
+          code <- codes[[r, c]][n]
+          if(is.null(code_list[[code_length]][[code_type]][[code]]))
+            code_list[[code_length]][[code_type]][[code]] <- ccc
+          else
+            stop('found duplicate code: code_length:', code_length, ' code_type:', code_type, ' code: ', code)
+        }
+      }
+    }
+  }
+  code_list
+}
+
+#' @export
+get_collapsed_codes <- function(icdv = 9L) {
+  codes <- get_codes(icdv)
+
+  # loop through all codes once to find max length
+  max_length <- 1
+  min_length <- 5
+  for(r in 1:nrow(codes)) {
+    ccc <- rownames(codes)[r]
+    for (c in 1:ncol(codes)) {
+      for (n in seq_along(codes[[r, c]])) {
+        if (stri_length(codes[[r, c]][n]) > max_length)
+          max_length <- stri_length(codes[[r, c]][n])
+        if (stri_length(codes[[r, c]][n]) < min_length)
+          min_length <- stri_length(codes[[r, c]][n])
+      }
+    }
+  }
+  pkg.env[["max_length"]] <- max_length
+  pkg.env[["min_length"]] <- min_length
+
+  # now build the data structure for searching
+  code_list <- lapply(c(1:max_length), function(x) new.env(parent = emptyenv()))
+
+  for(r in 1:nrow(codes)) {
+    ccc <- rownames(codes)[r]
+    for (c in 1:ncol(codes)) {
+      for (n in seq_along(codes[[r, c]])) {
+        if (! ccc %in% c('tech_dep', 'transplant')) {
+          code_length <- stri_length(codes[[r, c]][n])
+          code_type <- colnames(codes)[c]
+          code <- codes[[r, c]][n]
+          code_list[[code_length]][[code]] <- ccc
+        }
       }
     }
   }
@@ -45,18 +97,51 @@ get_primary_codes <- function(icdv = 9L) {
 #' @export
 get_codes_subset <- function(icdv = 9L, ccc_subset_name) {
   codes <- get_codes(icdv)[ccc_subset_name, ]
+  ccc_index <- match(ccc_subset_name, rownames(get_codes(9)))
 
   # now build the data structure for searching
-  code_list <- sapply(c(1:pkg.env[["max_length"]]), function(x) new.env(parent = emptyenv()))
+  code_list <- lapply(c(1:pkg.env[["max_length"]]), function(x) new.env(parent = emptyenv()))
+  lapply(code_list, function(x) {
+    x[['dx']] <- new.env(parent = emptyenv())
+    x[['pc']] <- new.env(parent = emptyenv())
+  })
 
   for (c in seq_along(codes)) {
     for (n in seq_along(codes[[c]])) {
-      code_list[[stringi::stri_length(codes[[c]][n])]][[codes[[c]][n]]] <- ccc_subset_name
+      code_length <- stri_length(codes[[c]][n])
+      code_type <- names(codes)[c]
+      code <- codes[[c]][n]
+
+      if(is.null(code_list[[code_length]][[code_type]][[code]]))
+        code_list[[code_length]][[code_type]][[code]] <- ccc_subset_name
+      else
+        stop('found duplicate code: code_length:', code_length, ' code_type:', code_type, ' code: ', code)
     }
   }
 
   code_list
 }
+
+#' @export
+get_collapsed_codes_subset <- function(icdv = 9L, ccc_subset_name) {
+  codes <- get_codes(icdv)[ccc_subset_name, ]
+
+  # now build the data structure for searching
+  code_list <- lapply(c(1:pkg.env[["max_length"]]), function(x) new.env(parent = emptyenv()))
+
+  for (c in seq_along(codes)) {
+    for (n in seq_along(codes[[c]])) {
+      code_length <- stri_length(codes[[c]][n])
+      code_type <- names(codes)[c]
+      code <- codes[[c]][n]
+
+      code_list[[code_length]][[code_type]][[code]] <- ccc_subset_name
+    }
+  }
+
+  code_list
+}
+
 
 set_code_set <- function(icd_ver = 9L) {
   if (icd_ver == 9) {
