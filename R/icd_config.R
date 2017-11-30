@@ -6,6 +6,10 @@
   assign("pkg.env", new.env(parent = emptyenv()), envir = parent.env(environment()))
 }
 
+# Originally this used the string of the CCC for the result of the hash lookup
+# but through microbenchmark I found that having the result be a number was
+# slightly faster
+#
 #' @export
 get_primary_codes <- function(icdv = 9L) {
   codes <- get_codes(icdv)

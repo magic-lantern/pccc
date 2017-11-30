@@ -70,17 +70,17 @@ ccc.data.frame <- function(data, id, dx_cols, pc_cols, icdv) {
   # timing: c++ version: 6.593 sec elapsed - original
   # #
   library(tictoc)
-  tic("timing: r version")
-  dplyr::bind_cols(ids, ccc_mat_r(dxmat, pcmat, icdv))
-  toc()
-
-  tic("timing: r hash version")
-  dplyr::bind_cols(ids, ccc_hash_r(dxmat, pcmat, icdv))
-  toc()
-
-  tic("timing: r flat hash version")
-  dplyr::bind_cols(ids, ccc_hash_flat_r(dxmat, pcmat, icdv))
-  toc()
+  # tic("timing: r version")
+  # dplyr::bind_cols(ids, ccc_mat_r(dxmat, pcmat, icdv))
+  # toc()
+  #
+  # tic("timing: r hash version")
+  # dplyr::bind_cols(ids, ccc_hash_r(dxmat, pcmat, icdv))
+  # toc()
+  #
+  # tic("timing: r flat hash version")
+  # dplyr::bind_cols(ids, ccc_hash_flat_r(dxmat, pcmat, icdv))
+  # toc()
 
   tic("timing: c++ version")
   dplyr::bind_cols(ids, ccc_mat_rcpp(dxmat, pcmat, icdv))
@@ -293,6 +293,9 @@ find_match <- function(dx,
 }
 
 # using new list of envs
+# I've tried various methods of pre-filtering ICD codes beofre substring of hash lookup
+# but it seems every method actually makes the function call slower. Specifically, in my
+# test to make sure code correct length -it makes this function call about 50% slower
 ccc_hash_r <- function(dx, pc, version = 9L) {
   out <- matrix(0L,
                 nrow = nrow(dx),

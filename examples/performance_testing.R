@@ -336,3 +336,22 @@ find_in_list <- function() {
     })
 }
 
+
+
+#######################################################################
+library(readr)
+
+mcod <- readr::read_fwf("~/Downloads/ICD9_ICD10_comparability_public_use_ASCII.dat",
+#mcod <- readr::read_fwf("~/Downloads/comparability_head.dat",
+                        readr::fwf_positions(
+                          start = c(64, 65, 142, 444),
+                          end = c(64, 66, 145, 447),
+                          col_names = c('age_code', 'age', 'icd9', 'icd10')),
+                        col_types = 'iicc')
+mcod <- mcod[
+             (mcod$age_code == 0 & mcod$age <= 21) |
+             (mcod$age_code %in% c(2, 3, 4, 5, 6))
+            , ]
+mcod <- dplyr::mutate(mcod, id = seq_along(age))
+mcod <- mcod[c("id", "icd9", "icd10")]
+
