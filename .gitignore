@@ -29,3 +29,5 @@ vignettes/*.pdf
 *.swo
 .Rproj.user
 inst/doc
+# macOS specific files
+.DS_Store
