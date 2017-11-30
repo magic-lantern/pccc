@@ -12,7 +12,7 @@
 #' less than 100 should be left padded with 1 zero.
 #' }
 #'
-#' See See `vignette("pccc-overview")` for more details.
+#' See `vignette("pccc-overview")` for more details.
 #'
 #' @references
 #' See \code{\link{pccc-package}} for published paper on the topic of identifying
@@ -49,20 +49,19 @@ ccc.data.frame <- function(data, id, dx_cols, pc_cols, icdv) {
          call. = FALSE)
   }
 
+  # with around 200,000 rows of data previous use of sapply is equal to this new mutate method
+  # however, due to how sapply simplifies and converts to a matrix, it doesn't always give the
+  # output as expected by the rest of this applciation (sapply will convert rows to columns)
+  # under 200k, sapply is faster
+  # over 200k mutate is faster
   if (!missing(dx_cols)) {
-    dxmat <- sapply(dplyr::select(data, !!dplyr::enquo(dx_cols)), as.character)
-    if(! is.matrix(dxmat)) {
-      dxmat <- as.matrix(dxmat)
-    }
+    dxmat <- as.matrix(dplyr::mutate_all(dplyr::select(data, !!dplyr::enquo(dx_cols)), as.character))
   } else {
     dxmat <- matrix("", nrow = nrow(data))
   }
 
   if (!missing(pc_cols)) {
-    pcmat <- sapply(dplyr::select(data, !!dplyr::enquo(pc_cols)), as.character)
-    if(! is.matrix(pcmat)) {
-      pcmat <- as.matrix(pcmat)
-    }
+    pcmat <- as.matrix(dplyr::mutate_all(dplyr::select(data, !!dplyr::enquo(pc_cols)), as.character))
   } else {
     pcmat <- matrix("", nrow = nrow(data))
   }
