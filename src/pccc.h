@@ -7,6 +7,12 @@
 class codes {
   private:
     int version;
+    std::map<std::string, int> dx_neuromusc_m;
+    std::unordered_map<std::string, int> dx_neuromusc_um;
+    std::set<std::string> dx_neuromusc_s;
+    std::unordered_set<std::string> dx_neuromusc_us;
+
+
 
     std::vector<std::string> dx_neuromusc;
     std::vector<std::string> dx_fixed_neuromusc;

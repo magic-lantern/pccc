@@ -401,6 +401,27 @@ codes::codes(int v)
       "30250G0","30250G1","30250X0","30250X1","30250Y0","30250Y1","30253G0","30253G1","30253X0",
       "30253X1","30253Y0","30253Y1","30260G0","30260G1","30260X0","30260X1","30260Y0","30260Y1",
       "30263G0","30263G1","30263X0","30263X1","30263Y0","30263Y1"};
+
+    // map (ordered)
+    for (std::string c : dx_neuromusc) {
+      dx_neuromusc_m[c] = 0;
+    }
+    // map unordered
+    for (std::string c : dx_neuromusc) {
+      dx_neuromusc_um[c] = 0;
+    }
+
+    // use set instead?
+    //   myset.find(x) != myset.end()
+    // regular set
+    std::copy(dx_neuromusc.begin(), dx_neuromusc.end(), std::inserter( dx_neuromusc_s, dx_neuromusc_s.end()));
+    // unordered
+    std::copy(dx_neuromusc.begin(), dx_neuromusc.end(), std::inserter( dx_neuromusc_us, dx_neuromusc_us.end()));
+
+    // final option - sorted vector and binary search
+    // some example code:
+    //   std::sort(dx_neuromusc.begin(), dx_neuromusc.end());
+    //   if (std::binary_search (v.begin(), v.end(), value_to_find)) {}
   }
 };
 
@@ -410,6 +431,13 @@ int codes::find_match(const std::vector<std::string>& dx,
                       const std::vector<std::string>& pc_codes)
 {
   size_t dxitr, pcitr, itr;
+
+  // set test - check for exact match
+  for (dxitr = 0; dxitr < dx.size(); ++dxitr) {
+    if (dx_neuromusc_s.find(dx[dxitr]) != dx_neuromusc_s.end()) {
+      return 1;
+    }
+  }
 
   for (dxitr = 0; dxitr < dx.size(); ++dxitr) {
     for (itr = 0; itr < dx_codes.size(); ++itr) {
