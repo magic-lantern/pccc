@@ -401,28 +401,45 @@ codes::codes(int v)
       "30250G0","30250G1","30250X0","30250X1","30250Y0","30250Y1","30253G0","30253G1","30253X0",
       "30253X1","30253Y0","30253Y1","30260G0","30260G1","30260X0","30260X1","30260Y0","30260Y1",
       "30263G0","30263G1","30263X0","30263X1","30263Y0","30263Y1"};
-
-    // map (ordered)
-    for (std::string c : dx_neuromusc) {
-      dx_neuromusc_m[c] = 0;
-    }
-    // map unordered
-    for (std::string c : dx_neuromusc) {
-      dx_neuromusc_um[c] = 0;
-    }
-
-    // use set instead?
-    //   myset.find(x) != myset.end()
-    // regular set
-    std::copy(dx_neuromusc.begin(), dx_neuromusc.end(), std::inserter( dx_neuromusc_s, dx_neuromusc_s.end()));
-    // unordered
-    std::copy(dx_neuromusc.begin(), dx_neuromusc.end(), std::inserter( dx_neuromusc_us, dx_neuromusc_us.end()));
-
-    // final option - sorted vector and binary search
-    // some example code:
-    //   std::sort(dx_neuromusc.begin(), dx_neuromusc.end());
-    //   if (std::binary_search (v.begin(), v.end(), value_to_find)) {}
   }
+
+  // map (ordered)
+  for (std::string c : dx_neuromusc) {
+    dx_neuromusc_m[c] = 2;
+  }
+  // map unordered
+  for (std::string c : dx_neuromusc) {
+    dx_neuromusc_um[c] = 2;
+  }
+
+  // use set instead?
+  //   myset.find(x) != myset.end()
+  // regular set
+  std::copy(dx_neuromusc.begin(), dx_neuromusc.end(), std::inserter( dx_neuromusc_s, dx_neuromusc_s.end()));
+  // unordered
+  std::copy(dx_neuromusc.begin(), dx_neuromusc.end(), std::inserter( dx_neuromusc_us, dx_neuromusc_us.end()));
+
+  for (std::string c : pc_neuromusc) {
+    pc_neuromusc_m[c] = 0;
+  }
+  // map unordered
+  for (std::string c : pc_neuromusc) {
+    pc_neuromusc_um[c] = 0;
+  }
+
+  // use set instead?
+  //   myset.find(x) != myset.end()
+  // regular set
+  std::copy(pc_neuromusc.begin(), pc_neuromusc.end(), std::inserter(pc_neuromusc_s, pc_neuromusc_s.end()));
+  // unordered
+  std::copy(pc_neuromusc.begin(), pc_neuromusc.end(), std::inserter(pc_neuromusc_us, pc_neuromusc_us.end()));
+
+
+  // final option - sorted vector and binary search
+  // some example code:
+  std::sort(dx_neuromusc.begin(), dx_neuromusc.end());
+  std::sort(pc_neuromusc.begin(), pc_neuromusc.end());
+  //   if (std::binary_search (v.begin(), v.end(), value_to_find)) {}
 };
 
 int codes::find_match(const std::vector<std::string>& dx,
@@ -432,28 +449,95 @@ int codes::find_match(const std::vector<std::string>& dx,
 {
   size_t dxitr, pcitr, itr;
 
-  // set test - check for exact match
+  //vector search
   for (dxitr = 0; dxitr < dx.size(); ++dxitr) {
-    if (dx_neuromusc_s.find(dx[dxitr]) != dx_neuromusc_s.end()) {
+    if (std::binary_search(dx_codes.begin(), dx_codes.end(), dx[dxitr])) {
       return 1;
     }
   }
 
-  for (dxitr = 0; dxitr < dx.size(); ++dxitr) {
-    for (itr = 0; itr < dx_codes.size(); ++itr) {
-      if (dx[dxitr].compare(0, dx_codes[itr].size(),dx_codes[itr]) == 0) {
-        return 1;
-      }
+  for (pcitr = 0; pcitr < pc.size(); ++pcitr) {
+    if (std::binary_search(pc_codes.begin(), pc_codes.end(), pc[pcitr])) {
+      return 1;
     }
   }
 
-  for (pcitr = 0; pcitr < pc.size(); ++pcitr) {
-    for (itr = 0; itr < pc_codes.size(); ++itr) {
-      if (pc[pcitr].compare(0, pc_codes[itr].size(),pc_codes[itr]) == 0) {
-        return 1;
-      }
+
+  /*
+  // map test
+  for (dxitr = 0; dxitr < dx.size(); ++dxitr) {
+    // dx_neuromusc_m[dx[dxitr]] adds a new key, so can check if not exist
+    // performance test these options
+    if (dx_neuromusc_um.count(dx[dxitr]) == 1) {
+    //if (dx_neuromusc_um.find(dx[dxitr]) != dx_neuromusc_um.end()) {
+      return 1;
     }
+
+    //dx_neuromusc_m.find(dx[dxitr] == dx_neuromusc_m.end()
+
+    //if (dx_neuromusc_m) {
+    //  return 1;
+    //}
   }
+
+  for (pcitr = 0; pcitr < pc.size(); ++pcitr) {
+    // dx_neuromusc_m[dx[dxitr]] adds a new key, so can check if not exist
+    // performance test these options
+    if (pc_neuromusc_um.count(pc[pcitr]) == 1) {
+    //if (pc_neuromusc_um.find(pc[pcitr]) != pc_neuromusc_um.end()) {
+      return 1;
+    }
+
+    //dx_neuromusc_m.find(dx[dxitr] == dx_neuromusc_m.end()
+
+    //if (dx_neuromusc_m) {
+    //  return 1;
+    //}
+  }
+   */
+
+
+  /*
+   *
+   *      # check diagnosis codes for mutually exclusive cccs
+   for (c in dx_trimmed) {
+  match <- p_dx[[c]]
+  if (!is.null(match)) {
+  out[i, match] <- 1L
+  out[i, 13] <- 1L
+  }
+   */
+
+  //set test - check for exact match
+  // for (dxitr = 0; dxitr < dx.size(); ++dxitr) {
+  //   //Rcpp::Rcout << "find: " << dx[dxitr] << " dx_neuromusc_s.find(dx[dxitr]) " << (dx_neuromusc_s.find(dx[dxitr]) != dx_neuromusc_s.end()) << "\n";
+  //   if (dx_neuromusc_s.find(dx[dxitr]) != dx_neuromusc_s.end()) {
+  //     return 1;
+  //   }
+  // }
+  // for (pcitr = 0; pcitr < pc.size(); ++pcitr) {
+  //   if (pc_neuromusc_s.find(pc[pcitr]) != pc_neuromusc_s.end()) {
+  //     return 1;
+  //   }
+  // }
+
+  // for (dxitr = 0; dxitr < dx.size(); ++dxitr) {
+  //   for (itr = 0; itr < dx_codes.size(); ++itr) {
+  //     //if (dx[dxitr].compare(0, dx_codes[itr].size(),dx_codes[itr]) == 0) {
+  //     if (dx[dxitr] == dx_codes[itr]) {
+  //       return 1;
+  //     }
+  //   }
+  // }
+  //
+  // for (pcitr = 0; pcitr < pc.size(); ++pcitr) {
+  //   for (itr = 0; itr < pc_codes.size(); ++itr) {
+  //     //if (pc[pcitr].compare(0, pc_codes[itr].size(),pc_codes[itr]) == 0) {
+  //     if (pc[pcitr] == pc_codes[itr]) {
+  //       return 1;
+  //     }
+  //   }
+  // }
   return 0;
 }
 

@@ -68,5 +68,6 @@ ccc.data.frame <- function(data, id, dx_cols, pc_cols, icdv) {
 
   ids <- dplyr::select(data, !!dplyr::enquo(id))
 
-  dplyr::bind_cols(ids, ccc_mat_rcpp(dxmat, pcmat, icdv))
+  #dplyr::bind_cols(ids, ccc_mat_rcpp(dxmat, pcmat, icdv))
+  dplyr::bind_cols(ids, ccc_mat_hash(dxmat, pcmat, icdv))
 }

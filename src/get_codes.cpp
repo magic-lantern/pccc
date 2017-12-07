@@ -3,6 +3,7 @@
 
 #include <string>
 #include <Rcpp.h>
+#include "get_codes.h"
 #include "pccc.h"
 
 const Rcpp::CharacterVector codes::col_names = Rcpp::CharacterVector::create("neuromusc", "cvd", "respiratory", "renal", "gi", "hemato_immu", "metabolic", "congeni_genetic", "malignancy", "neonatal", "tech_dep", "transplant");
@@ -51,18 +52,18 @@ Rcpp::List get_codes(int icdv) {
   codes cds(icdv);
 
   Rcpp::List dx = Rcpp::List::create(
-          Rcpp::wrap(cds.get_dx_neuromusc()),
-          Rcpp::wrap(cds.get_dx_cvd()),
-          Rcpp::wrap(cds.get_dx_respiratory()),
-          Rcpp::wrap(cds.get_dx_renal()),
-          Rcpp::wrap(cds.get_dx_gi()),
-          Rcpp::wrap(cds.get_dx_hemato_immu()),
-          Rcpp::wrap(cds.get_dx_metabolic()),
-          Rcpp::wrap(cds.get_dx_congeni_genetic()),
-          Rcpp::wrap(cds.get_dx_malignancy()),
-          Rcpp::wrap(cds.get_dx_neonatal()),
-          Rcpp::wrap(cds.get_dx_tech_dep()),
-          Rcpp::wrap(cds.get_dx_transplant()));
+    Rcpp::wrap(cds.get_dx_neuromusc()),
+    Rcpp::wrap(cds.get_dx_cvd()),
+    Rcpp::wrap(cds.get_dx_respiratory()),
+    Rcpp::wrap(cds.get_dx_renal()),
+    Rcpp::wrap(cds.get_dx_gi()),
+    Rcpp::wrap(cds.get_dx_hemato_immu()),
+    Rcpp::wrap(cds.get_dx_metabolic()),
+    Rcpp::wrap(cds.get_dx_congeni_genetic()),
+    Rcpp::wrap(cds.get_dx_malignancy()),
+    Rcpp::wrap(cds.get_dx_neonatal()),
+    Rcpp::wrap(cds.get_dx_tech_dep()),
+    Rcpp::wrap(cds.get_dx_transplant()));
 
   Rcpp::List dx_fixed = Rcpp::List::create(
     Rcpp::wrap(cds.get_dx_fixed_neuromusc()),
@@ -79,18 +80,18 @@ Rcpp::List get_codes(int icdv) {
     Rcpp::CharacterVector::create());
 
   Rcpp::List pc = Rcpp::List::create(
-          Rcpp::wrap(cds.get_pc_neuromusc()),
-          Rcpp::wrap(cds.get_pc_cvd()),
-          Rcpp::wrap(cds.get_pc_respiratory()),
-          Rcpp::wrap(cds.get_pc_renal()),
-          Rcpp::wrap(cds.get_pc_gi()),
-          Rcpp::wrap(cds.get_pc_hemato_immu()),
-          Rcpp::wrap(cds.get_pc_metabolic()),
-          Rcpp::CharacterVector::create(),
-          Rcpp::wrap(cds.get_pc_malignancy()),
-          Rcpp::CharacterVector::create(),
-          Rcpp::wrap(cds.get_pc_tech_dep()),
-          Rcpp::wrap(cds.get_pc_transplant()));
+    Rcpp::wrap(cds.get_pc_neuromusc()),
+    Rcpp::wrap(cds.get_pc_cvd()),
+    Rcpp::wrap(cds.get_pc_respiratory()),
+    Rcpp::wrap(cds.get_pc_renal()),
+    Rcpp::wrap(cds.get_pc_gi()),
+    Rcpp::wrap(cds.get_pc_hemato_immu()),
+    Rcpp::wrap(cds.get_pc_metabolic()),
+    Rcpp::CharacterVector::create(),
+    Rcpp::wrap(cds.get_pc_malignancy()),
+    Rcpp::CharacterVector::create(),
+    Rcpp::wrap(cds.get_pc_tech_dep()),
+    Rcpp::wrap(cds.get_pc_transplant()));
 
   Rcpp::List pc_fixed = Rcpp::List::create(
     Rcpp::CharacterVector::create(),
@@ -124,4 +125,39 @@ Rcpp::List get_codes(int icdv) {
   rtn.attr("class") = "pccc_codes";
 
   return(rtn);
+}
+
+//' @export
+// [[Rcpp::export]]
+void get_primary_codes(int icdv = 9) {
+  Rcpp::List codes = get_codes(icdv);
+  std::unordered_map<int, std::unordered_map<std::string, int>> ret;
+  std:: unordered_map<std::string, int> um;
+
+  for(int i=0; i < codes.length(); ++i) {
+    Rcpp::Rcout << "line 137, i:" << i << "\n";
+    std::vector<std::string> cv = Rcpp::as<std::vector<std::string>>(codes[i]);
+
+    //first 10 are substring matching exclusive codes
+    if (i < 10) {
+      for(int j=0; j < cv.size(); ++j) {
+        um = ret[cv[j].length()];
+        um[cv[j]] = i;
+        ret[cv[j].length()] = um;
+      }
+    }
+
+    // next block are exclusive fixed codes
+    if (i >= 12 && i < 22) {
+      for(int j=0; j < cv.size(); ++j) {
+        um = ret[cv[j].length()];
+        um[cv[j]] = i - 12;
+        ret[cv[j].length()] = um;
+      }
+    }
+  }
+
+  // check a few values in the map to see if it works right
+  Rcpp::Rcout << "map[6][T86819]: " << ret[6]["T86819"] << "\n";
+  Rcpp::Rcout << "map[6][G40911]: " << ret[6]["G40911"] << "\n";
 }

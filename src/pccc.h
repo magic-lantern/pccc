@@ -12,6 +12,11 @@ class codes {
     std::set<std::string> dx_neuromusc_s;
     std::unordered_set<std::string> dx_neuromusc_us;
 
+    std::map<std::string, int> pc_neuromusc_m;
+    std::unordered_map<std::string, int> pc_neuromusc_um;
+    std::set<std::string> pc_neuromusc_s;
+    std::unordered_set<std::string> pc_neuromusc_us;
+
 
 
     std::vector<std::string> dx_neuromusc;
@@ -58,7 +63,8 @@ class codes {
 
   public:
     codes(int v);
-
+    int max_length = 0;
+    int min_length = 5;
     int get_version() { return version; };
 
     int neuromusc(      std::vector<std::string>& dx, std::vector<std::string>& pc);

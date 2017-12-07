@@ -18,6 +18,19 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// ccc_mat_hash
+Rcpp::DataFrame ccc_mat_hash(Rcpp::CharacterMatrix& dx, Rcpp::CharacterMatrix& pc, int version);
+RcppExport SEXP _pccc_ccc_mat_hash(SEXP dxSEXP, SEXP pcSEXP, SEXP versionSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::CharacterMatrix& >::type dx(dxSEXP);
+    Rcpp::traits::input_parameter< Rcpp::CharacterMatrix& >::type pc(pcSEXP);
+    Rcpp::traits::input_parameter< int >::type version(versionSEXP);
+    rcpp_result_gen = Rcpp::wrap(ccc_mat_hash(dx, pc, version));
+    return rcpp_result_gen;
+END_RCPP
+}
 // get_codes
 Rcpp::List get_codes(int icdv);
 RcppExport SEXP _pccc_get_codes(SEXP icdvSEXP) {
@@ -29,10 +42,22 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// get_primary_codes
+void get_primary_codes(int icdv);
+RcppExport SEXP _pccc_get_primary_codes(SEXP icdvSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< int >::type icdv(icdvSEXP);
+    get_primary_codes(icdv);
+    return R_NilValue;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_pccc_ccc_mat_rcpp", (DL_FUNC) &_pccc_ccc_mat_rcpp, 3},
+    {"_pccc_ccc_mat_hash", (DL_FUNC) &_pccc_ccc_mat_hash, 3},
     {"_pccc_get_codes", (DL_FUNC) &_pccc_get_codes, 1},
+    {"_pccc_get_primary_codes", (DL_FUNC) &_pccc_get_primary_codes, 1},
     {NULL, NULL, 0}
 };
 
